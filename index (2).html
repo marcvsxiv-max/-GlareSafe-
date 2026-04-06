@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GlareSafe — See Through the Glare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: rgba(255,255,255,0.07);
+    --red: #ff3b3b;
+    --yellow: #ffd500;
+    --green: #00e676;
+    --accent: #00b4ff;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --card: #15151f;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 3rem;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 0.12em;
+    color: var(--text);
+    display: flex; align-items: center; gap: 0.8rem;
+  }
+
+  .nav-logo svg { width: 36px; height: 36px; flex-shrink: 0; }
+
+  nav ul { list-style: none; display: flex; gap: 2.5rem; }
+  nav ul a {
+    text-decoration: none; color: var(--muted);
+    font-size: 0.8rem; font-weight: 500; letter-spacing: 0.1em;
+    text-transform: uppercase; transition: color 0.2s;
+  }
+  nav ul a:hover { color: var(--text); }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid; place-items: center;
+    padding: 8rem 3rem 5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 700px; height: 700px;
+    background: radial-gradient(ellipse, rgba(0,180,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    max-width: 960px; text-align: center;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem; letter-spacing: 0.2em;
+    color: var(--accent); text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0; animation: fadeUp 0.8s 0.2s forwards;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(5rem, 12vw, 10rem);
+    line-height: 0.95;
+    letter-spacing: 0.04em;
+    margin-bottom: 1.5rem;
+    opacity: 0; animation: fadeUp 0.8s 0.35s forwards;
+  }
+
+  h1 span.g { color: var(--green); }
+  h1 span.r { color: var(--red); }
+
+  .hero-sub {
+    font-size: 1.2rem; font-weight: 300; color: var(--muted);
+    max-width: 560px; margin: 0 auto 3rem;
+    opacity: 0; animation: fadeUp 0.8s 0.5s forwards;
+  }
+
+  /* Traffic light visual */
+  .traffic-light {
+    margin: 3rem auto 0;
+    display: inline-flex; flex-direction: column; align-items: center;
+    gap: 0;
+    opacity: 0; animation: fadeUp 0.8s 0.65s forwards;
+  }
+
+  .tl-housing {
+    background: #1a1a24;
+    border: 1px solid var(--border);
+    border-radius: 2rem;
+    padding: 1.4rem 1rem;
+    display: flex; flex-direction: column; gap: 1.2rem;
+    box-shadow: 0 0 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+    position: relative;
+  }
+
+  .tl-bulb {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    position: relative;
+    transition: all 0.6s ease;
+  }
+
+  .tl-bulb.active-r {
+    background: var(--red);
+    box-shadow: 0 0 30px 10px rgba(255,59,59,0.5), 0 0 60px 20px rgba(255,59,59,0.2);
+  }
+  .tl-bulb.active-y {
+    background: var(--yellow);
+    box-shadow: 0 0 30px 10px rgba(255,213,0,0.5), 0 0 60px 20px rgba(255,213,0,0.2);
+  }
+  .tl-bulb.active-g {
+    background: var(--green);
+    box-shadow: 0 0 30px 10px rgba(0,230,118,0.5), 0 0 60px 20px rgba(0,230,118,0.2);
+  }
+  .tl-bulb.dim { background: #2a2a36; }
+
+  /* scan line on housing */
+  .tl-housing::after {
+    content: '';
+    position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+    background: linear-gradient(180deg, transparent, var(--accent), transparent);
+    transform: translateX(-50%);
+    animation: scan 2s linear infinite;
+    opacity: 0.3;
+  }
+
+  @keyframes scan {
+    0% { top: 0; bottom: 100%; }
+    50% { top: 0; bottom: 0; }
+    100% { top: 100%; bottom: 0; }
+  }
+
+  /* ── SECTION BASE ── */
+  section { padding: 6rem 3rem; }
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.25em;
+    color: var(--accent); text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    letter-spacing: 0.06em;
+    line-height: 1;
+    margin-bottom: 1.5rem;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  /* ── PROBLEM ── */
+  .problem {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .problem-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 5rem;
+    align-items: center;
+  }
+
+  .problem-stat {
+    display: flex; flex-direction: column; gap: 0.3rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: rgba(255,59,59,0.04);
+    margin-top: 2rem;
+  }
+
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.5rem; color: var(--red);
+    line-height: 1;
+  }
+
+  .stat-label { color: var(--muted); font-size: 0.9rem; }
+
+  .glare-vis {
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    height: 320px;
+  }
+
+  .glare-circle {
+    position: absolute;
+    border-radius: 50%;
+    animation: pulse-glare 3s ease-in-out infinite;
+  }
+
+  .glare-circle:nth-child(1) {
+    width: 260px; height: 260px;
+    background: radial-gradient(circle, rgba(255,220,100,0.35) 0%, transparent 70%);
+  }
+  .glare-circle:nth-child(2) {
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(255,220,100,0.5) 0%, transparent 60%);
+    animation-delay: 0.5s;
+  }
+  .glare-circle:nth-child(3) {
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(255,240,180,0.9) 0%, transparent 70%);
+    animation-delay: 1s;
+  }
+
+  .glare-text {
+    position: absolute; bottom: 1rem; left: 0; right: 0;
+    text-align: center; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem; color: var(--muted);
+  }
+
+  @keyframes pulse-glare {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.08); opacity: 1; }
+  }
+
+  /* ── HOW IT WORKS ── */
+  .steps {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;
+    margin-top: 3rem;
+    counter-reset: step;
+  }
+
+  .step {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 2rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+
+  .step:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+  }
+
+  .step::before {
+    content: '0' counter(step);
+    counter-increment: step;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    color: rgba(255,255,255,0.04);
+    position: absolute; top: -0.5rem; right: 1rem;
+    line-height: 1;
+  }
+
+  .step-icon {
+    font-size: 1.8rem; margin-bottom: 1rem;
+  }
+
+  .step h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem; letter-spacing: 0.05em;
+    margin-bottom: 0.5rem; color: var(--text);
+  }
+
+  .step p { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+
+  .step-accent {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .step:hover .step-accent { opacity: 1; }
+
+  /* ── TECH SPECS ── */
+  .tech { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+  .tech-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4rem;
+    align-items: start;
+    margin-top: 2.5rem;
+  }
+
+  .spec-table { width: 100%; border-collapse: collapse; }
+  .spec-table tr { border-bottom: 1px solid var(--border); }
+  .spec-table td {
+    padding: 0.9rem 0;
+    font-size: 0.9rem;
+  }
+  .spec-table td:first-child {
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    width: 45%;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .spec-table td:last-child { color: var(--text); }
+
+  .pill {
+    display: inline-block;
+    background: rgba(0,230,118,0.12);
+    color: var(--green);
+    border: 1px solid rgba(0,230,118,0.3);
+    border-radius: 2rem; padding: 0.2rem 0.7rem;
+    font-size: 0.75rem; font-family: 'JetBrains Mono', monospace;
+  }
+  .pill.ai {
+    background: rgba(0,180,255,0.12);
+    color: var(--accent);
+    border-color: rgba(0,180,255,0.3);
+  }
+
+  .signal-demo {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 2rem;
+  }
+
+  .signal-demo h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem; letter-spacing: 0.15em;
+    color: var(--muted); text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  .signal-row {
+    display: flex; align-items: center; gap: 1.2rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .signal-row:last-child { border-bottom: none; }
+
+  .sig-dot {
+    width: 24px; height: 24px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .sig-r { background: var(--red); box-shadow: 0 0 10px rgba(255,59,59,0.5); }
+  .sig-y { background: var(--yellow); box-shadow: 0 0 10px rgba(255,213,0,0.5); }
+  .sig-g { background: var(--green); box-shadow: 0 0 10px rgba(0,230,118,0.5); }
+
+  .sig-info { flex: 1; }
+  .sig-info strong {
+    display: block; font-size: 0.9rem;
+    font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.05em;
+  }
+  .sig-info span { font-size: 0.78rem; color: var(--muted); }
+
+  .sig-output {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 0.3rem;
+    padding: 0.3rem 0.7rem;
+    color: var(--accent);
+  }
+
+  /* ── DESIGN PROCESS ── */
+  .timeline { margin-top: 3rem; position: relative; }
+  .timeline::before {
+    content: '';
+    position: absolute; left: 1.5rem; top: 0; bottom: 0;
+    width: 1px; background: var(--border);
+  }
+
+  .tl-item {
+    display: flex; gap: 2rem;
+    padding: 0 0 3rem 5rem;
+    position: relative;
+  }
+
+  .tl-dot {
+    position: absolute; left: 0.8rem; top: 0.4rem;
+    width: 1.5rem; height: 1.5rem;
+    border-radius: 50%; border: 2px solid var(--accent);
+    background: var(--bg);
+    display: grid; place-items: center;
+  }
+  .tl-dot::after {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .tl-content {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    flex: 1;
+  }
+
+  .tl-phase {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.15em;
+    color: var(--accent); text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .tl-content h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem; letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .tl-content p { font-size: 0.88rem; color: var(--muted); }
+
+  /* ── TEAM ── */
+  .team-grid {
+    display: flex; gap: 2rem; margin-top: 3rem; flex-wrap: wrap;
+  }
+
+  .team-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    padding: 2rem;
+    flex: 1; min-width: 200px;
+    text-align: center;
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .team-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+
+  .avatar {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    margin: 0 auto 1rem;
+    display: grid; place-items: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem; color: var(--bg);
+  }
+
+  .team-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem; letter-spacing: 0.05em; margin-bottom: 0.3rem;
+  }
+  .team-card p { font-size: 0.82rem; color: var(--muted); }
+
+  /* ── CATEGORY BADGE ── */
+  .category-banner {
+    background: linear-gradient(135deg, rgba(0,180,255,0.08), rgba(0,230,118,0.08));
+    border: 1px solid rgba(0,180,255,0.2);
+    border-radius: 1rem;
+    padding: 2.5rem;
+    display: flex; align-items: center; gap: 2rem;
+    margin-top: 4rem;
+  }
+
+  .cat-icon { font-size: 3rem; }
+
+  .cat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem; letter-spacing: 0.2em;
+    color: var(--accent); text-transform: uppercase; margin-bottom: 0.3rem;
+  }
+
+  .cat-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem; letter-spacing: 0.05em;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 3rem;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+  }
+
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem; letter-spacing: 0.12em;
+  }
+
+  footer p { font-size: 0.8rem; color: var(--muted); }
+
+  .lights-footer { display: flex; gap: 0.5rem; }
+  .lf { width: 10px; height: 10px; border-radius: 50%; }
+  .lf-r { background: var(--red); }
+  .lf-y { background: var(--yellow); }
+  .lf-g { background: var(--green); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    nav { padding: 1rem 1.5rem; }
+    nav ul { gap: 1.2rem; }
+    section { padding: 4rem 1.5rem; }
+    .problem-grid, .tech-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+    .steps { grid-template-columns: 1fr 1fr; }
+    footer { flex-direction: column; text-align: center; }
+  }
+
+  @media (max-width: 500px) {
+    .steps { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="47" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="1"/>
+      <circle cx="50" cy="50" r="44" fill="#0d0d1a"/>
+      <line x1="50" y1="50" x2="10" y2="14" stroke="#ffd500" stroke-width="8" opacity="0.18"/>
+      <line x1="50" y1="50" x2="50" y2="8" stroke="#ffd500" stroke-width="6" opacity="0.15"/>
+      <line x1="50" y1="50" x2="88" y2="18" stroke="#ffd500" stroke-width="5" opacity="0.12"/>
+      <rect x="34" y="18" width="32" height="64" rx="7" fill="#1e1e30" stroke="#2e2e50" stroke-width="0.5"/>
+      <circle cx="50" cy="33" r="8" fill="#ff3b3b"/>
+      <circle cx="50" cy="50" r="8" fill="#ffd500"/>
+      <circle cx="50" cy="67" r="8" fill="#00e676"/>
+      <circle cx="50" cy="50" r="44" fill="none" stroke="#00b4ff" stroke-width="1" opacity="0.4"/>
+    </svg>
+    GlareSafe
+  </div>
+  <ul>
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#tech">Tech</a></li>
+    <li><a href="#process">Process</a></li>
+    <li><a href="#team">Team</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div class="hero-inner">
+    <p class="hero-eyebrow">CIJE Innovation Day 2026 &nbsp;·&nbsp; Engineering for Transportation</p>
+    <div style="display:flex;justify-content:center;margin-bottom:1.5rem;opacity:0;animation:fadeUp 0.8s 0.25s forwards;">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:110px;height:110px;">
+        <circle cx="50" cy="50" r="47" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="0.8"/>
+        <circle cx="50" cy="50" r="44" fill="#0d0d1a"/>
+        <!-- glare rays -->
+        <line x1="50" y1="50" x2="10" y2="14" stroke="#ffd500" stroke-width="9" opacity="0.18"/>
+        <line x1="50" y1="50" x2="50" y2="6" stroke="#ffd500" stroke-width="7" opacity="0.15"/>
+        <line x1="50" y1="50" x2="90" y2="16" stroke="#ffd500" stroke-width="5" opacity="0.12"/>
+        <line x1="50" y1="50" x2="96" y2="46" stroke="#ffd500" stroke-width="4" opacity="0.10"/>
+        <line x1="50" y1="50" x2="8" y2="50" stroke="#ffd500" stroke-width="4" opacity="0.10"/>
+        <!-- polarizer grid -->
+        <line x1="8" y1="30" x2="92" y2="30" stroke="#00b4ff" stroke-width="0.6" opacity="0.10"/>
+        <line x1="8" y1="38" x2="92" y2="38" stroke="#00b4ff" stroke-width="0.6" opacity="0.10"/>
+        <line x1="8" y1="46" x2="92" y2="46" stroke="#00b4ff" stroke-width="0.6" opacity="0.10"/>
+        <line x1="8" y1="54" x2="92" y2="54" stroke="#00b4ff" stroke-width="0.6" opacity="0.10"/>
+        <line x1="8" y1="62" x2="92" y2="62" stroke="#00b4ff" stroke-width="0.6" opacity="0.10"/>
+        <line x1="8" y1="70" x2="92" y2="70" stroke="#00b4ff" stroke-width="0.6" opacity="0.10"/>
+        <!-- traffic light housing -->
+        <rect x="34" y="16" width="32" height="68" rx="8" fill="#1e1e30" stroke="#2e2e50" stroke-width="0.8"/>
+        <!-- bulbs -->
+        <circle cx="50" cy="32" r="9" fill="#ff3b3b"/>
+        <circle cx="50" cy="32" r="5" fill="#ff7070" opacity="0.55"/>
+        <circle cx="50" cy="50" r="9" fill="#ffd500"/>
+        <circle cx="50" cy="50" r="5" fill="#ffe066" opacity="0.55"/>
+        <circle cx="50" cy="68" r="9" fill="#00e676"/>
+        <circle cx="50" cy="68" r="5" fill="#66ffb2" opacity="0.55"/>
+        <!-- rim -->
+        <circle cx="50" cy="50" r="44" fill="none" stroke="#00b4ff" stroke-width="1.2" opacity="0.45"/>
+        <circle cx="50" cy="50" r="40" fill="none" stroke="#ffffff" stroke-width="0.4" opacity="0.07"/>
+        <!-- scan line -->
+        <line x1="8" y1="50" x2="92" y2="50" stroke="#00b4ff" stroke-width="0.6" opacity="0.2" stroke-dasharray="3 3"/>
+      </svg>
+    </div>
+    <h1>GLARE<span class="g">SAFE</span></h1>
+    <p class="hero-sub">An AI-powered device that reads traffic light colors through blinding glare — announcing the signal clearly so you can drive safely.</p>
+    <div class="traffic-light">
+      <div class="tl-housing" id="tlHousing">
+        <div class="tl-bulb" id="bulb-r"></div>
+        <div class="tl-bulb" id="bulb-y"></div>
+        <div class="tl-bulb" id="bulb-g"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem" id="problem">
+  <div class="container">
+    <div class="problem-grid">
+      <div>
+        <p class="section-label reveal">The Problem</p>
+        <h2 class="reveal">When You Can't See the Light</h2>
+        <p class="reveal" style="color: var(--muted);">
+          Every driver knows the moment — sun directly in your eyes, dashboard reflection, or wet windshield scatter — when a traffic light turns into a blinding blob of light. You can't tell if it's red, yellow, or green.
+        </p>
+        <p class="reveal" style="color: var(--muted); margin-top: 1rem;">
+          This isn't just an inconvenience. Glare is a leading factor in intersection accidents, and existing solutions like sun visors and tinted glasses fail to selectively filter traffic signal glare. GlareSafe solves this with AI.
+        </p>
+        <div class="problem-stat reveal">
+          <span class="stat-num">43%</span>
+          <span class="stat-label">of drivers report glare significantly impairs their ability to read traffic signals at intersections (NHTSA data)</span>
+        </div>
+      </div>
+      <div class="glare-vis reveal">
+        <div class="glare-circle"></div>
+        <div class="glare-circle"></div>
+        <div class="glare-circle"></div>
+        <p class="glare-text">// simulated driver glare condition</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="container">
+    <p class="section-label reveal">Solution</p>
+    <h2 class="reveal">How GlareSafe Works</h2>
+    <p class="reveal" style="color: var(--muted); max-width: 620px;">Four integrated stages take the guesswork out of glare — from raw signal capture to crystal-clear driver output in under a second.</p>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-icon">🔭</div>
+        <h3>Capture</h3>
+        <p>An AI camera module equipped with a polarizing lens cuts through windshield and environmental glare to lock onto the traffic light.</p>
+        <div class="step-accent"></div>
+      </div>
+      <div class="step reveal">
+        <div class="step-icon">🤖</div>
+        <h3>Detect</h3>
+        <p>Onboard AI vision classifies the traffic light color in real time — handling variable brightness, angle, and lighting conditions.</p>
+        <div class="step-accent"></div>
+      </div>
+      <div class="step reveal">
+        <div class="step-icon">⚡</div>
+        <h3>Process</h3>
+        <p>The classification result is transmitted to an ESP32 microcontroller, which coordinates audio and visual output simultaneously.</p>
+        <div class="step-accent"></div>
+      </div>
+      <div class="step reveal">
+        <div class="step-icon">🔊</div>
+        <h3>Alert</h3>
+        <p>The device speaks the detected color clearly — "Red," "Yellow," or "Green" — while a display confirms the signal visually.</p>
+        <div class="step-accent"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH SPECS -->
+<section class="tech" id="tech">
+  <div class="container">
+    <p class="section-label reveal">Technical Specifications</p>
+    <h2 class="reveal">Under the Hood</h2>
+    <div class="tech-grid">
+      <div>
+        <table class="spec-table reveal">
+          <tr>
+            <td>Microcontroller</td>
+            <td>ESP32 <span class="pill">Input / Output</span></td>
+          </tr>
+          <tr>
+            <td>Vision Module</td>
+            <td>AI Camera (Arduino-compatible)</td>
+          </tr>
+          <tr>
+            <td>Optics</td>
+            <td>Polarizing Lens Filter</td>
+          </tr>
+          <tr>
+            <td>AI Method</td>
+            <td>Color Classification <span class="pill ai">AI</span></td>
+          </tr>
+          <tr>
+            <td>Input</td>
+            <td>Live camera feed</td>
+          </tr>
+          <tr>
+            <td>Output (Audio)</td>
+            <td>Spoken color announcement</td>
+          </tr>
+          <tr>
+            <td>Output (Visual)</td>
+            <td>LED / Display panel</td>
+          </tr>
+          <tr>
+            <td>Category</td>
+            <td>Engineering for Transportation</td>
+          </tr>
+        </table>
+      </div>
+      <div class="signal-demo reveal">
+        <h3>// Signal Output Demo</h3>
+        <div class="signal-row">
+          <div class="sig-dot sig-r"></div>
+          <div class="sig-info">
+            <strong>Red Detected</strong>
+            <span>AI confidence threshold met → halt signal</span>
+          </div>
+          <div class="sig-output">🔊 "RED"</div>
+        </div>
+        <div class="signal-row">
+          <div class="sig-dot sig-y"></div>
+          <div class="sig-info">
+            <strong>Yellow Detected</strong>
+            <span>Transition signal → caution output</span>
+          </div>
+          <div class="sig-output">🔊 "YELLOW"</div>
+        </div>
+        <div class="signal-row">
+          <div class="sig-dot sig-g"></div>
+          <div class="sig-info">
+            <strong>Green Detected</strong>
+            <span>Clear signal → proceed output</span>
+          </div>
+          <div class="sig-output">🔊 "GREEN"</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DESIGN PROCESS -->
+<section id="process">
+  <div class="container">
+    <p class="section-label reveal">Design Process</p>
+    <h2 class="reveal">From Idea to Prototype</h2>
+    <div class="timeline">
+      <div class="tl-item reveal">
+        <div class="tl-dot"></div>
+        <div class="tl-content">
+          <p class="tl-phase">Phase 1 — Identify</p>
+          <h3>Problem Discovery</h3>
+          <p>The problem was identified through a real-world experience — a person directly experienced the danger of traffic light glare and brought it to us as an engineering challenge worth solving. We researched the scope of glare-related driving hazards and confirmed this as a genuine safety gap.</p>
+        </div>
+      </div>
+      <div class="tl-item reveal">
+        <div class="tl-dot"></div>
+        <div class="tl-content">
+          <p class="tl-phase">Phase 2 — Research</p>
+          <h3>Technology Exploration</h3>
+          <p>We researched existing solutions (polarized glasses, sun visors) and their limitations. We evaluated AI camera modules compatible with Arduino and ESP32 platforms, and studied how color-detection AI models work under variable lighting. The polarizing lens was identified as a key component to reduce glare before it reaches the sensor.</p>
+        </div>
+      </div>
+      <div class="tl-item reveal">
+        <div class="tl-dot"></div>
+        <div class="tl-content">
+          <p class="tl-phase">Phase 3 — Design</p>
+          <h3>System Architecture</h3>
+          <p>We designed the GlareSafe pipeline: polarizing lens → AI camera → microcontroller → dual output (audio + visual display). Component selection was driven by the $75 project budget constraint. We mapped input sensors and output channels to meet CIJE project requirements.</p>
+        </div>
+      </div>
+      <div class="tl-item reveal">
+        <div class="tl-dot"></div>
+        <div class="tl-content">
+          <p class="tl-phase">Phase 4 — Build</p>
+          <h3>Prototype Development</h3>
+          <p>Currently assembling the physical prototype. Components sourced; integration of the AI camera with ESP32 and audio output module in progress. The polarizing lens housing is being designed to mount securely for in-vehicle use.</p>
+        </div>
+      </div>
+      <div class="tl-item reveal">
+        <div class="tl-dot"></div>
+        <div class="tl-content">
+          <p class="tl-phase">Phase 5 — Test</p>
+          <h3>Validation & Iteration</h3>
+          <p>Next step: real-world testing under various glare conditions — direct sunlight, wet roads, night reflections. User feedback from drivers will drive iterative refinements to detection accuracy and output clarity.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM -->
+<section id="team" style="background: var(--surface); border-top: 1px solid var(--border);">
+  <div class="container">
+    <p class="section-label reveal">The Team</p>
+    <h2 class="reveal">Built By</h2>
+    <div class="team-grid">
+      <div class="team-card reveal">
+        <div class="avatar">AD</div>
+        <h3>Aaron Dworkin</h3>
+        <p>Co-Inventor &amp; Engineer</p>
+      </div>
+      <div class="team-card reveal">
+        <div class="avatar">CH</div>
+        <h3>Chezki Halali</h3>
+        <p>Co-Inventor &amp; Engineer</p>
+      </div>
+    </div>
+
+    <div class="category-banner reveal">
+      <div class="cat-icon">🚗</div>
+      <div>
+        <p class="cat-label">Project Category</p>
+        <p class="cat-name">Engineering for Transportation</p>
+        <p style="font-size: 0.85rem; color: var(--muted); margin-top: 0.3rem;">CIJE Innovation Day 2026</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">
+    GlareSafe
+    <div class="lights-footer" style="display:inline-flex; margin-left: 0.8rem; gap: 0.4rem; vertical-align: middle;">
+      <div class="lf lf-r"></div>
+      <div class="lf lf-y"></div>
+      <div class="lf lf-g"></div>
+    </div>
+  </div>
+  <p>CIJE Innovation Day 2026 &nbsp;·&nbsp; Engineering for Transportation</p>
+  <p style="font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted);">Aaron Dworkin &amp; Chezki Halali</p>
+</footer>
+
+<script>
+  // Traffic light cycling animation
+  const bulbs = [
+    document.getElementById('bulb-r'),
+    document.getElementById('bulb-y'),
+    document.getElementById('bulb-g')
+  ];
+  const classes = ['active-r', 'active-y', 'active-g'];
+  const durations = [3500, 1200, 3500];
+  let current = 0;
+
+  function cycleLights() {
+    bulbs.forEach((b, i) => {
+      b.className = 'tl-bulb' + (i === current ? ' ' + classes[i] : ' dim');
+    });
+    setTimeout(() => {
+      current = (current + 1) % 3;
+      cycleLights();
+    }, durations[current]);
+  }
+  cycleLights();
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  reveals.forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
